@@ -38,6 +38,8 @@ def get_tags(db: Session) -> List[models.Tag]:
 
 
 def create_note(db: Session, note_in: schemas.NoteCreate) -> models.Note:
+    # TODO: Добавьте обработку ошибок БД с try/except SQLAlchemyError
+    # См. REVIEW.md секция "Критические проблемы" пункт 5
     db_note = models.Note(
         title=note_in.title,
         content=note_in.content,
@@ -50,7 +52,7 @@ def create_note(db: Session, note_in: schemas.NoteCreate) -> models.Note:
 
     if note_in.tag_ids:
         tags = db.query(models.Tag).filter(models.Tag.id.in_(note_in.tag_ids)).all()
-        db_note.tags = tags
+        db_note.tags = tags  # TODO: проверить что все tag_ids найдены
 
     db.add(db_note)
     db.commit()
@@ -121,10 +123,14 @@ def get_notes_filtered(
     if before is not None:
         q = q.filter(models.Note.reminder_date <= before)
 
+    # TODO: КРИТИЧНО! SQL Injection риск - спецсимволы % и _ не экранируются
+    # См. REVIEW.md секция "Критические проблемы" пункт 2
     if search:
-        like = f"%{search}%"
+        like = f"%{search}%"  # TODO: добавить search.replace('%', '\\%').replace('_', '\\_')
         q = q.outerjoin(models.Note.tags).filter(
             (models.Note.title.ilike(like)) | (models.Note.content.ilike(like)) | (models.Tag.name.ilike(like))
         ).distinct()
 
-    return q.order_by(models.Note.created_at.desc()).all()
+    # TODO: Добавьте пагинацию (skip, limit) для больших списков
+    # См. REVIEW.md секция "Критические проблемы" пункт 3
+    return q.order_by(models.Note.created_at.desc()).all()  # TODO: .offset(skip).limit(limit)

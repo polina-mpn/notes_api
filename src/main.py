@@ -5,6 +5,9 @@ from . import models, database, config
 from .routers import notes
 from .routers import frontend
 
+# TODO: Удалите эту строку! Используйте только Alembic миграции
+# При каждом запуске пересоздаются таблицы
+# См. REVIEW.md секция "Критические проблемы" пункт 1
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title=config.APP_NAME)

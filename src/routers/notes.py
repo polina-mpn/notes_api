@@ -7,7 +7,8 @@ from .. import schemas, crud, models, database
 
 router = APIRouter(prefix="/api", tags=["notes"])
 
-
+# TODO: Удалите дублирование get_db() - используйте из database.py
+# См. REVIEW.md секция "Критические проблемы" пункт 6
 def get_db():
     db = database.SessionLocal()
     try:

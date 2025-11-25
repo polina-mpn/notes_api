@@ -3,6 +3,10 @@ from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
+# TODO: Добавьте валидацию с validator для всех полей
+# Нет ограничений на длину, пустые значения, будущие даты
+# См. REVIEW.md секция "Критические проблемы" пункт 4
+
 
 class NoteStatus(str, Enum):
     draft = "draft"
@@ -44,14 +48,14 @@ class Category(CategoryBase):
 
 
 class NoteBase(BaseModel):
-    title: str = Field(..., json_schema_extra={'example': "Сдать проект"})
-    content: Optional[str] = Field(None, json_schema_extra={'example': "Сделать README и тесты"})
+    title: str = Field(..., json_schema_extra={'example': "Сдать проект"})  # TODO: добавить min_length=1, max_length=200
+    content: Optional[str] = Field(None, json_schema_extra={'example': "Сделать README и тесты"})  # TODO: max_length=5000
     is_important: bool = False
     status: NoteStatus = NoteStatus.active
     priority: NotePriority = NotePriority.medium
-    reminder_date: Optional[datetime] = None
-    category_id: Optional[int] = None
-    tag_ids: Optional[List[int]] = []
+    reminder_date: Optional[datetime] = None  # TODO: валидация "дата в будущем"
+    category_id: Optional[int] = None  # TODO: Field(None, ge=1)
+    tag_ids: Optional[List[int]] = []  # TODO: валидация уникальности
 
 
 class NoteCreate(NoteBase):
