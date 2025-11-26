@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notes</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <a class="logo" href="/notes">Notes — Полина 🌸</a>
+      <nav>
+        <a href="/notes">Все заметки</a>
+        <a href="/notes/create" class="btn btn-soft">Создать</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container">© Полина — Notes App</div>
+  </footer>
+</body>
+</html>

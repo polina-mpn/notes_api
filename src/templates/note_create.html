@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Создать новую заметку</h2>
+
+  <form method="post" action="/notes/create" class="form-card">
+    <label>Название
+      <input type="text" name="title" required class="input">
+    </label>
+
+    <label>Содержание
+      <textarea name="content" class="textarea"></textarea>
+    </label>
+
+    <label>Категория (имя)
+      <input type="text" name="category_name" class="input" placeholder="например, университет">
+    </label>
+
+    <label>Теги (через запятую)
+      <input type="text" name="tags" class="input" placeholder="учёба, проект">
+    </label>
+
+    <label>Напоминание (ISO, например 2025-11-12T09:00)
+      <input type="text" name="reminder_date" class="input" placeholder="YYYY-MM-DDTHH:MM:SS">
+    </label>
+
+    <label class="inline">
+      <input type="checkbox" name="is_important" value="1"> Важная
+    </label>
+
+    <label>Статус
+      <select name="status" class="input">
+        <option value="active">active</option>
+        <option value="draft">draft</option>
+        <option value="done">done</option>
+        <option value="postponed">postponed</option>
+      </select>
+    </label>
+
+    <label>Приоритет
+      <select name="priority" class="input">
+        <option value="low">low</option>
+        <option value="medium" selected>medium</option>
+        <option value="high">high</option>
+      </select>
+    </label>
+
+    <div class="form-actions">
+      <button class="btn btn-primary">Создать</button>
+      <a class="btn btn-soft" href="/notes">Отмена</a>
+    </div>
+  </form>
+{% endblock %}

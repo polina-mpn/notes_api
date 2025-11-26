@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Редактировать заметку</h2>
+
+  <form method="post" action="/notes/{{ note.id }}/edit" class="form-card">
+    <label>Название
+      <input type="text" name="title" required class="input" value="{{ note.title }}">
+    </label>
+
+    <label>Содержание
+      <textarea name="content" class="textarea">{{ note.content }}</textarea>
+    </label>
+
+    <label>Категория (имя)
+      <input type="text" name="category_name" class="input" value="{{ note.category.name if note.category else '' }}">
+    </label>
+
+    <label>Теги (через запятую)
+      <input type="text" name="tags" class="input" value="{{ tag_names }}">
+    </label>
+
+    <label>Напоминание (ISO)
+      <input type="text" name="reminder_date" class="input" value="{{ note.reminder_date.strftime('%Y-%m-%dT%H:%M:%S') if note.reminder_date else '' }}">
+    </label>
+
+    <label class="inline">
+      <input type="checkbox" name="is_important" value="1" {% if note.is_important %}checked{% endif %}> Важная
+    </label>
+
+    <label>Статус
+      <select name="status" class="input">
+        <option value="active" {% if note.status.value=='active' %}selected{% endif %}>active</option>
+        <option value="draft" {% if note.status.value=='draft' %}selected{% endif %}>draft</option>
+        <option value="done" {% if note.status.value=='done' %}selected{% endif %}>done</option>
+        <option value="postponed" {% if note.status.value=='postponed' %}selected{% endif %}>postponed</option>
+      </select>
+    </label>
+
+    <label>Приоритет
+      <select name="priority" class="input">
+        <option value="low" {% if note.priority.value=='low' %}selected{% endif %}>low</option>
+        <option value="medium" {% if note.priority.value=='medium' %}selected{% endif %}>medium</option>
+        <option value="high" {% if note.priority.value=='high' %}selected{% endif %}>high</option>
+      </select>
+    </label>
+
+    <div class="form-actions">
+      <button class="btn btn-primary">Сохранить</button>
+      <a class="btn btn-soft" href="/notes/{{ note.id }}">Отмена</a>
+    </div>
+  </form>
+{% endblock %}
