@@ -1,12 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
-
-# TODO: Добавьте валидацию с validator для всех полей
-# Нет ограничений на длину, пустые значения, будущие даты
-# См. REVIEW.md секция "Критические проблемы" пункт 4
-
 
 class NoteStatus(str, Enum):
     draft = "draft"
@@ -48,15 +43,55 @@ class Category(CategoryBase):
 
 
 class NoteBase(BaseModel):
-    title: str = Field(..., json_schema_extra={'example': "Сдать проект"})  # TODO: добавить min_length=1, max_length=200
-    content: Optional[str] = Field(None, json_schema_extra={'example': "Сделать README и тесты"})  # TODO: max_length=5000
+    title: str = Field(..., min_length=1, max_length=200)
+    content: Optional[str] = Field(None, max_length=5000)
     is_important: bool = False
     status: NoteStatus = NoteStatus.active
     priority: NotePriority = NotePriority.medium
-    reminder_date: Optional[datetime] = None  # TODO: валидация "дата в будущем"
-    category_id: Optional[int] = None  # TODO: Field(None, ge=1)
-    tag_ids: Optional[List[int]] = []  # TODO: валидация уникальности
+    reminder_date: Optional[datetime] = Field(None, description="Reminder date (future)")
+    category_id: Optional[int] = Field(None, ge=1)
+    tag_ids: Optional[List[int]] = Field(default_factory=list)
 
+    @field_validator('title', 'content')
+    def not_empty_string(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Field cannot be empty or whitespace')
+        return v.strip() if v else v
+
+    @field_validator('reminder_date')
+    def reminder_in_future(cls, v):
+        if v:
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=UTC)
+            if v < datetime.now(UTC):
+                raise ValueError("reminder must be in the future")
+        return v
+
+    @field_validator('tag_ids')
+    def unique_tags(cls, v):
+        if v and len(v) != len(set(v)):
+            raise ValueError('Tag IDs must be unique')
+        return v
+
+
+class CategoryBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator('name')
+    def not_empty(cls, v):
+        if not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v.strip()
+
+
+class TagBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50)
+
+    @field_validator('name')
+    def not_empty(cls, v):
+        if not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v.strip()
 
 class NoteCreate(NoteBase):
     pass
@@ -79,5 +114,14 @@ class Note(NoteBase):
     updated_at: Optional[datetime] = None
     category: Optional[Category] = None
     tags: List[Tag] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedNotes(BaseModel):
+    items: List[Note]
+    total: int
+    skip: int
+    limit: int
 
     model_config = ConfigDict(from_attributes=True)

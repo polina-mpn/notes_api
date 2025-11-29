@@ -1,9 +1,13 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from fastapi import HTTPException
+import logging
 
 from . import models, schemas
 
+logger = logging.getLogger(__name__)
 
 def get_category_by_name(db: Session, name: str) -> Optional[models.Category]:
     return db.query(models.Category).filter(models.Category.name == name).first()
@@ -38,26 +42,35 @@ def get_tags(db: Session) -> List[models.Tag]:
 
 
 def create_note(db: Session, note_in: schemas.NoteCreate) -> models.Note:
-    # TODO: Добавьте обработку ошибок БД с try/except SQLAlchemyError
-    # См. REVIEW.md секция "Критические проблемы" пункт 5
-    db_note = models.Note(
-        title=note_in.title,
-        content=note_in.content,
-        is_important=note_in.is_important,
-        status=note_in.status,
-        priority=note_in.priority,
-        reminder_date=note_in.reminder_date,
-        category_id=note_in.category_id,
-    )
+    try:
+        db_note = models.Note(
+            title=note_in.title,
+            content=note_in.content,
+            is_important=note_in.is_important,
+            status=note_in.status,
+            priority=note_in.priority,
+            reminder_date=note_in.reminder_date,
+            category_id=note_in.category_id,
+        )
 
-    if note_in.tag_ids:
-        tags = db.query(models.Tag).filter(models.Tag.id.in_(note_in.tag_ids)).all()
-        db_note.tags = tags  # TODO: проверить что все tag_ids найдены
+        if note_in.tag_ids:
+            tags = db.query(models.Tag).filter(models.Tag.id.in_(note_in.tag_ids)).all()
+            if len(tags) != len(note_in.tag_ids):
+                raise HTTPException(400, "Some tag IDs not found")
+            db_note.tags = tags
 
-    db.add(db_note)
-    db.commit()
-    db.refresh(db_note)
-    return db_note
+        db.add(db_note)
+        db.commit()
+        db.refresh(db_note)
+        return db_note
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Integrity error: {e}")
+        raise HTTPException(400, "Database constraint violation")
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error: {e}")
+        raise HTTPException(500, "Database error")
 
 
 def get_note(db: Session, note_id: int) -> Optional[models.Note]:
@@ -95,6 +108,8 @@ def update_note(db: Session, note_id: int, note_data: schemas.NoteUpdate) -> Opt
 
 def get_notes_filtered(
     db: Session,
+    skip: int = 0,
+    limit: int = 100,
     category_id: Optional[int] = None,
     tag_id: Optional[int] = None,
     status: Optional[models.NoteStatus] = None,
@@ -123,14 +138,42 @@ def get_notes_filtered(
     if before is not None:
         q = q.filter(models.Note.reminder_date <= before)
 
-    # TODO: КРИТИЧНО! SQL Injection риск - спецсимволы % и _ не экранируются
-    # См. REVIEW.md секция "Критические проблемы" пункт 2
     if search:
-        like = f"%{search}%"  # TODO: добавить search.replace('%', '\\%').replace('_', '\\_')
+        search_escaped = search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        like = f"%{search_escaped}%"
         q = q.outerjoin(models.Note.tags).filter(
-            (models.Note.title.ilike(like)) | (models.Note.content.ilike(like)) | (models.Tag.name.ilike(like))
+            (models.Note.title.ilike(like, escape='\\')) |
+            (models.Note.content.ilike(like, escape='\\')) |
+            (models.Tag.name.ilike(like, escape='\\'))
         ).distinct()
 
-    # TODO: Добавьте пагинацию (skip, limit) для больших списков
-    # См. REVIEW.md секция "Критические проблемы" пункт 3
-    return q.order_by(models.Note.created_at.desc()).all()  # TODO: .offset(skip).limit(limit)
+    return q.order_by(models.Note.created_at.desc()).offset(skip).limit(limit).all()
+
+def count_notes_filtered(
+    db: Session,
+    category_id: int = None,
+    tag_id: int = None,
+    status: models.NoteStatus = None,
+    important: bool = None,
+    before: datetime = None,
+    search: str = None,
+    priority: models.NotePriority = None,
+):
+    query = db.query(models.Note)
+
+    if category_id:
+        query = query.filter(models.Note.category_id == category_id)
+    if tag_id:
+        query = query.join(models.Note.tags).filter(models.Tag.id == tag_id)
+    if status:
+        query = query.filter(models.Note.status == status)
+    if priority:
+        query = query.filter(models.Note.priority == priority)
+    if important is not None:
+        query = query.filter(models.Note.important == important)
+    if before:
+        query = query.filter(models.Note.created_at < before)
+    if search:
+        query = query.filter(models.Note.title.ilike(f"%{search}%"))
+
+    return query.count()
