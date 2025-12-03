@@ -4,19 +4,11 @@ from typing import Optional, List
 from datetime import datetime
 
 from .. import schemas, crud, models, database
+from ..database import get_db
 
 router = APIRouter(prefix="/api", tags=["notes"])
 
 
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# ---- Categories & Tags crud endpoints (simple) ----
 @router.post("/categories/", response_model=schemas.Category)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
     existing = crud.get_category_by_name(db, category.name)
@@ -43,15 +35,15 @@ def list_tags(db: Session = Depends(get_db)):
     return crud.get_tags(db)
 
 
-# ---- Notes ----
 @router.post("/notes/", response_model=schemas.Note)
 def create_note(note: schemas.NoteCreate, db: Session = Depends(get_db)):
     return crud.create_note(db, note)
 
-
-@router.get("/notes/", response_model=List[schemas.Note])
+@router.get("/notes/", response_model=schemas.PaginatedNotes) # <--- ИЗМЕНЕНИЕ
 def read_notes(
     db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Offset"),
+    limit: int = Query(100, ge=1, le=1000, description="Limit"),
     category_id: Optional[int] = Query(None),
     tag_id: Optional[int] = Query(None),
     status: Optional[models.NoteStatus] = Query(None),
@@ -60,7 +52,8 @@ def read_notes(
     before: Optional[datetime] = Query(None),
     search: Optional[str] = Query(None),
 ):
-    return crud.get_notes_filtered(
+
+    notes = crud.get_notes_filtered(
         db,
         category_id=category_id,
         tag_id=tag_id,
@@ -71,6 +64,23 @@ def read_notes(
         priority=priority,
     )
 
+    total = crud.count_notes_filtered(
+        db,
+        category_id=category_id,
+        tag_id=tag_id,
+        status=status,
+        important=important,
+        before=before,
+        search=search,
+        priority=priority,
+    )
+
+    return {
+        "items": notes,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.get("/notes/{note_id}", response_model=schemas.Note)
 def read_note(note_id: int, db: Session = Depends(get_db)):
