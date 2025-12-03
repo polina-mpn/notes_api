@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>Мои заметки</h1>
+    <p class="muted">Сортируй, фильтруй, не забывай.</p>
+  </section>
+
+  <section class="filters">
+    <form method="get" action="/notes">
+      <input type="text" name="search" placeholder="Поиск..." class="input" value="{{ request.query_params.get('search','') }}">
+      <select name="status" class="input">
+        <option value="">Все статусы</option>
+        <option value="active">active</option>
+        <option value="draft">draft</option>
+        <option value="done">done</option>
+        <option value="postponed">postponed</option>
+      </select>
+      <label class="checkbox"><input type="checkbox" name="important" value="true"> Важные</label>
+      <button class="btn btn-primary">Фильтровать</button>
+    </form>
+  </section>
+
+  <section class="notes-grid">
+    {% for n in notes %}
+      <article class="card">
+        <div class="card-head">
+          <h3><a href="/notes/{{ n.id }}">{{ n.title }}</a></h3>
+          {% if n.is_important %}<span class="pill important">Важное</span>{% endif %}
+        </div>
+        <p class="muted small">{{ n.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+        <p class="excerpt">{{ n.content[:180] if n.content else '' }}</p>
+        <div class="meta">
+          {% if n.category %}<span class="pill">{{ n.category.name }}</span>{% endif %}
+          {% for t in n.tags %}<span class="tag">#{{ t.name }}</span>{% endfor %}
+        </div>
+        <div class="card-actions">
+          <a class="btn btn-soft" href="/notes/{{ n.id }}">Открыть</a>
+          <a class="btn btn-soft" href="/notes/{{ n.id }}/edit">Редактировать</a>
+          <form method="post" action="/notes/{{ n.id }}/delete" style="display:inline">
+            <button class="btn btn-danger">Удалить</button>
+          </form>
+        </div>
+      </article>
+    {% else %}
+      <p>Заметок пока нет — <a href="/notes/create">создать первую</a>.</p>
+    {% endfor %}
+  </section>
+{% endblock %}
