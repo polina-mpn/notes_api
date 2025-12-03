@@ -5,8 +5,6 @@ from . import models, database, config
 from .routers import notes
 from .routers import frontend
 
-models.Base.metadata.create_all(bind=database.engine)
-
 app = FastAPI(title=config.APP_NAME)
 
 app.include_router(notes.router)
