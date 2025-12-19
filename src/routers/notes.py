@@ -53,6 +53,16 @@ def read_notes(
     search: Optional[str] = Query(None),
 ):
 
+    # TODO: КРИТИЧНО! Добавить skip и limit в вызов функции для корректной пагинации
+    # Сейчас параметры объявлены, но не используются - загружаются ВСЕ записи!
+    # Исправление:
+    # notes = crud.get_notes_filtered(
+    #     db,
+    #     skip=skip,        # <-- Добавить эту строку
+    #     limit=limit,      # <-- Добавить эту строку
+    #     category_id=category_id,
+    #     ...
+    # )
     notes = crud.get_notes_filtered(
         db,
         category_id=category_id,

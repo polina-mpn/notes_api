@@ -169,6 +169,9 @@ def count_notes_filtered(
         query = query.filter(models.Note.status == status)
     if priority:
         query = query.filter(models.Note.priority == priority)
+    # TODO: ОШИБКА! Неверное имя поля - должно быть is_important, а не important
+    # models.Note не имеет поля 'important', только 'is_important'
+    # Исправление: query = query.filter(models.Note.is_important == important)
     if important is not None:
         query = query.filter(models.Note.important == important)
     if before:
